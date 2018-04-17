@@ -7,6 +7,9 @@ import be.taffein.game.TicTacToe;
 public class DesktopLauncher {
 	public static void main (String[] arg) {
 		LwjglApplicationConfiguration config = new LwjglApplicationConfiguration();
+		config.title = "Tic Tac Toe";
+		config.width = 480;
+		config.height = 480;
 		new LwjglApplication(new TicTacToe(), config);
 	}
 }
