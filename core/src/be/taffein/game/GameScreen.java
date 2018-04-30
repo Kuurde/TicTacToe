@@ -6,9 +6,11 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Vector3;
+import com.badlogic.gdx.utils.TimeUtils;
 
 
 public class GameScreen implements Screen {
@@ -18,21 +20,31 @@ public class GameScreen implements Screen {
     private final TicTacToe game;
 
     private SpriteBatch spriteBatch;
+    private BitmapFont font;
     private ShapeRenderer shapeRenderer;
     private Texture xTexture;
     private Texture oTexture;
     private OrthographicCamera camera;
+
     private Tile[][] tiles;
+    private Vector3 touchPos = new Vector3();
+    private boolean playersTurn = true;
+    private long lastPlayerTurn;
+    private boolean somebodyWon = false;
+    private String winningPlayer;
 
     public GameScreen(final TicTacToe game) {
         this.game = game;
         spriteBatch = game.getSpriteBatch();
+        font = game.getFont();
 
         xTexture = new Texture(Gdx.files.internal("x.png"));
         oTexture = new Texture(Gdx.files.internal("o.png"));
 
         camera = new OrthographicCamera();
         camera.setToOrtho(false, 480, 480);
+
+        spriteBatch.setProjectionMatrix(camera.combined);
 
         shapeRenderer = new ShapeRenderer();
         shapeRenderer.setColor(Color.BLACK);
@@ -52,8 +64,66 @@ public class GameScreen implements Screen {
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
         camera.update();
 
+        if (!somebodyWon) {
+            if (playersTurn) {
+                playerTurn();
+            } else {
+                opponentTurn();
+            }
+            checkWinCondition();
+        } else {
+            // Show winner (or draw)
+        }
+
+
+        drawGrid();
+        drawTiles();
+    }
+
+    private void checkWinCondition() {
+         for (int i = 0; i <3; i++) {
+             if (tiles[i][0].equals(tiles[i][1]) && tiles[i][1].equals(tiles[i][2])) {
+                 somebodyWon = true;
+                 winningPlayer = tiles[i][0].getValue();
+                 System.out.println(winningPlayer + " won!");
+             }
+
+             if (tiles[0][i].equals(tiles[1][i]) && tiles[1][i].equals(tiles[2][i])) {
+                 somebodyWon = true;
+                 winningPlayer = tiles[0][i].getValue();
+                 System.out.println(winningPlayer + " won!");
+             }
+         }
+
+         if (tiles[0][0].equals(tiles[1][1]) && tiles[1][1].equals(tiles[2][2])) {
+             somebodyWon = true;
+             winningPlayer = tiles[0][0].getValue();
+             System.out.println(winningPlayer + " won!");
+         }
+
+        if (tiles[2][0].equals(tiles[1][1]) && tiles[1][1].equals(tiles[0][2])) {
+            somebodyWon = true;
+            winningPlayer = tiles[2][0].getValue();
+            System.out.println(winningPlayer + " won!");
+        }
+    }
+
+    private void opponentTurn() {
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 3; j++) {
+                Tile tile = tiles[i][j];
+                if (!playersTurn && tile.getValue() == null
+                       && TimeUtils.timeSinceNanos(lastPlayerTurn) > 1000000000) {
+                    tile.setValue(O);
+                    playersTurn = true;
+                }
+            }
+        }
+    }
+
+    private void playerTurn() {
         if (Gdx.input.isTouched()) {
-            Vector3 touchPos = new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0);
+            touchPos.set(Gdx.input.getX(), Gdx.input.getY(), 0);
             camera.unproject(touchPos);
 
             for (int i = 0; i < 3; i++) {
@@ -61,19 +131,16 @@ public class GameScreen implements Screen {
                     Tile tile = tiles[i][j];
                     if (tile.getRectangle().contains(touchPos.x, touchPos.y)) {
                         tile.setValue(X);
+                        playersTurn = false;
+                        lastPlayerTurn = TimeUtils.nanoTime();
                     }
                 }
             }
         }
-
-        drawGrid();
-        drawTiles();
     }
 
     private void drawTiles() {
-        spriteBatch.setProjectionMatrix(camera.combined);
         spriteBatch.begin();
-
         for (int i = 0; i < 3; i++) {
             for (int j = 0; j < 3; j++) {
                 Tile tile = tiles[i][j];
@@ -84,7 +151,6 @@ public class GameScreen implements Screen {
                 }
             }
         }
-
         spriteBatch.end();
     }
 
